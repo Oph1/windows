@@ -30,14 +30,16 @@ $Computers | Export-Csv C:\Infopro\InactiveComputers.csv -NoTypeInformation
 # Below are two options to manage the inactive computers that have been found. Either disable them, or delete them. Select the option that is most appropriate for your requirements:
 
 # Disable Inactive Computers
-ForEach ($Item in $Computers){
-  $DistName = $Item.DistinguishedName
-  Set-ADComputer -Identity $DistName -Enabled $false
-  Get-ADComputer -Filter { DistinguishedName -eq $DistName } | Select-Object Name, Enabled
-}
+#ForEach ($Item in $Computers){
+#  $DistName = $Item.DistinguishedName
+#  Set-ADComputer -Identity $DistName -Enabled $false
+#  Get-ADComputer -Filter { DistinguishedName -eq $DistName } | Select-Object Name, Enabled
+#}
 
 # Delete Inactive Computers
 ForEach ($Item in $Computers){
   Remove-ADComputer -Identity $Item.DistinguishedName -Confirm:$false
+  # Uncomment next row for del computer objects with other objects inside
+  # Get-ADComputer $Item.DistinguishedName | Remove-ADObject -Recursive -Confirm:$false
   Write-Output "$($Item.Name) - Deleted"
 }
