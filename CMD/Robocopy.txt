@@ -1,0 +1,75 @@
+robocopy "G:\Boites_de_depot" "\\192.168.0.5\Boites_de_depot" /S /COPYALL /R:2 /W:2 /MIR /LOG:robocopy2.log
+
+
+|-----------------------------------------------------------------------------------------------------------|
+|-----------------------------------------------------------------------------------------------------------|
+|-----------------------------------------------------------------------------------------------------------|
+ROBOCOPY source destination
+- source : représente le chemin du répertoire source (c:\chemin ou \\serveur\partage\chemin)
+- destination : représente le chemin du répertoire de destination (c:\chemin ou \\serveur\partage\chemin)
+|-----------------------------------------------------------------------------------------------------------|
+|-----------------------------------------------------------------------------------------------------------|
+|-----------------------------------------------------------------------------------------------------------|
+Options de copie
+
+    /S       : copie les sous-répertoires non vides uniquement
+    /E       : copie les sous répertoires, y compris les vides
+    /COPYALL : copie toutes les informations de fichiers
+
+Options de maintien d'une réplique
+
+    /PURGE : supprime les fichiers/répertoires de destination qui n'existe plus dans la source
+    /MIR   : met en MIRoir une arborescence (équivaut à /E plus /PURGE)
+
+    ATTENTION : Les options /PURGE et /MIR sont à utiliser avec prudence puisqu'en cas de suppression accidentelle d'un fichier source, la copie est supprimée à son tour
+
+Options de sélection des fichiers
+
+    /A  : copie uniquement les fichiers où l'attribut Archive est défini
+    /XO : exclut les fichiers anciens (ne pas copier les fichiers qui du côté source ont une date plus ancienne que du côté de la destination)
+
+    NOTE : L'option /XO est la plus appropriée pour faire la synchronisation de deux dossiers. On s’assure que les fichiers les plus récents sont de part et d’autre en faisant une copie avec cette option /XO dans un sens puis dans l’autre.
+
+Options de nouvelle tentative
+
+    /R:n : nombre (n) de tentatives après l'échec de copie (1 million par défaut)
+    /W:n : délai (n) entre les tentatives (30 secondes par défaut)
+
+    NOTE : "n" étant ici le nombre de tentative ou le nombre de secondes.
+
+Options de logging
+
+    /L : liste uniquement (pas de copie, d'horodatage ou de suppresion de fichiers)
+
+    NOTE : L'option /L permet de simuler la commande sans qu'aucune modification ne soit effectuée. Cette option est très utilie pour la mise au point de script utilisant Robocopy.
+
+    /LOG:fichier  : copie les différents status dans le fichier de log (remplace le fichier de log existant)
+    /LOG+:fichier : copie les différents status dans le fichier de log (ajoute fichier de log existant)
+
+    NOTE : "fichier" étant ici le nom et l'emplacement du fichier de log.
+|-----------------------------------------------------------------------------------------------------------|
+|-----------------------------------------------------------------------------------------------------------|
+|-----------------------------------------------------------------------------------------------------------|
+    Exemple 1 :
+
+    ROBOCOPY "C:\test" "\\NAS\backup" /E /COPYALL
+
+    Dans cet exemple, tous les répertoires et sous-répertoire y compris vides se trouvant dans "C:\test" sont copiés dans "\\NAS\backup", toutes les informations de fichiers sont conservées lors de la copie.
+
+    Exemple 2 :
+
+    ROBOCOPY "C:\test" "\\NAS\backup" /E /XO /R:10 
+
+    Dans cet exemple, tous les répertoires et sous-répertoire y compris vides se trouvant dans "C:\test" sont copiés dans "\\NAS\backup", les fichiers étant plus récent dans l'emplacement de destination ne sont pas copiés. En cas d'échec de copie, il y aura 10 autres tentatives de copies.
+
+    Exemple 3 :
+
+    ROBOCOPY "C:\test" "\\NAS\backup" /E /XO /L 
+
+    Dans cet exemple, il s'agit d'une simulation qui simulera l'action suivante : tous les répertoires et sous-répertoire y compris vides se trouvant dans "C:\test" sont copiés dans "\\NAS\backup", les fichiers étant plus récent dans l'emplacement de destination ne sont pas copiés.
+
+    Exemple 4 :
+
+    ROBOCOPY "C:\test" "\\NAS\backup" /E /COPYALL /LOG+:robocopy.log 
+
+    Dans cet exemple, tous les répertoires et sous-répertoire y compris vides se trouvant dans "C:\test" sont copiés dans "\\NAS\backup", toutes les informations de fichiers sont conservées lors de la copie. Les différents status lors de la copie seront ajoutés à la suite du fichier "robocopy.log"

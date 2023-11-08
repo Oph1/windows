@@ -1,7 +1,7 @@
 ﻿#Script for configure proxy setting
 
 <#
-$ProxyServer = "proxy-ecoles.ac-orleans-tours.fr:3128"
+$ProxyServer = "0451079D:gendre16tesson@proxy-ecoles.ac-orleans-tours.fr:3128"
 $ProxyBypassList = "192.168.2.3;192.168.2.4;192.168.2.5;192.168.2.72;<local>"
 $TurnProxyOnOff = "On"
 $ProxyPerMachine = $False
@@ -10,9 +10,11 @@ $ProxyPerMachine = $False
 
 #Get Datto Variable
 param ([string]$ProxyServer = "proxy-ecoles.ac-orleans-tours.fr:3128",
-       [string]$ProxyBypassList = "<local>",
-       [string]$TurnProxyOnOff = "Off",
-       [boolean]$ProxyPerMachine = $False)
+       [string]$ProxyBypassList = "<local>;merlot.rmm.datto.com",
+       [string]$proxyUsername = "0451079D",
+       [string]$proxyPassword = "gendre16tesson",
+       [boolean]$TurnProxyOnOff = $False,
+       [boolean]$ProxyPerMachine = $True)
 
 if ([Environment]::GetEnvironmentVariable("ProxyServeur", "Process")) {
     $ProxyServeur = [Environment]::GetEnvironmentVariable("ProxyServeur", "Process")
@@ -29,14 +31,14 @@ if ([Environment]::GetEnvironmentVariable("ProxyPerMachine", "Process")) {
  
 #Example: Set-InternetProxy "mproxy:3128" "*.mysite.com;<local>"
 function Set-InternetProxy($ProxyPerMachine, $TurnProxyOnOff, $proxy, $bypassUrls) {
-    if ($TurnProxyOnOff -eq "Off") { $ProxyEnabled = '01'; $ProxyEnable = 0 } Else { $ProxyEnabled = '11'; $ProxyEnable = 1 }
+    if ($TurnProxyOnOff) { $ProxyEnabled = '11'; $ProxyEnable = 1 } Else { $ProxyEnabled = '01'; $ProxyEnable = 0 }
  
     $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings"
     $proxyBytes = [system.Text.Encoding]::ASCII.GetBytes($proxy)
     $bypassBytes = [system.Text.Encoding]::ASCII.GetBytes($bypassUrls)
     $defaultConnectionSettings = [byte[]]@(@(70, 0, 0, 0, 0, 0, 0, 0, $ProxyEnabled, 0, 0, 0, $proxyBytes.Length, 0, 0, 0) + $proxyBytes + @($bypassBytes.Length, 0, 0, 0) + $bypassBytes + @(1..36 | % { 0 }))
                         
-    if ($ProxyPerMachine -eq $True) { #ProxySettingsPerMachine         
+    if ($ProxyPerMachine) { #ProxySettingsPerMachine         
  
         New-ItemProperty -Path $regPath -Name 'ProxySettingsPerUser' -Value 0 -PropertyType DWORD -Force #-ErrorAction SilentlyContinue
  
@@ -48,7 +50,7 @@ function Set-InternetProxy($ProxyPerMachine, $TurnProxyOnOff, $proxy, $bypassUrl
         ClearProxySettingPerUser
  
     }
-    Elseif ($ProxyPerMachine -eq $False) { #ProxySettingsPerUser
+    Elseif (!$ProxyPerMachine) { #ProxySettingsPerUser
         New-ItemProperty -Path $regPath -Name 'ProxySettingsPerUser' -Value 1 -PropertyType DWORD -Force #-ErrorAction SilentlyContinue
         #write-Host "we  get here"
  
@@ -71,7 +73,8 @@ function SetProxySettingsPerUser($Proxy, $ProxyEnable, $defaultConnectionSetting
     $DefaultProfile.SID = ".DEFAULT"
     $DefaultProfile.Userhive = "C:\Users\Public\NTuser.dat"
  
-    #$UserProfiles += $DefaultProfile
+    $UserProfiles += $DefaultProfile
+    #$UserProfiles = @($UserProfiles, $DefaultProfile)
  
     # Loop through each profile we found on the host
     Foreach ($UserProfile in $UserProfiles) {
@@ -121,14 +124,15 @@ function SetProxySettingsPerMachine ($Proxy, $ProxyEnable, $defaultConnectionSet
 Function ClearProxySettingPerUser () {
     # Get each user profile SID and Path to the profile
     $UserProfiles = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*" | Where { $_.PSChildName -match "S-1-5-21-(\d+-?){4}$" } | Select-Object @{Name = "SID"; Expression = { $_.PSChildName } }, @{Name = "UserHive"; Expression = { "$($_.ProfileImagePath)\NTuser.dat" } }
- 
+
     # We also grab the default user profile just in case the proxy settings have been changed in there, but they should not have been
     $DefaultProfile = "" | Select-Object SID, UserHive
     $DefaultProfile.SID = ".DEFAULT"
     $DefaultProfile.Userhive = "C:\Users\Public\NTuser.dat"
  
     $UserProfiles += $DefaultProfile
- 
+    #$UserProfiles = @($UserProfiles, $DefaultProfile)
+    
     # Loop through each profile we found on the host
     Foreach ($UserProfile in $UserProfiles) {
         # Load ntuser.dat if it's not already loaded
@@ -177,5 +181,58 @@ Function ClearProxySettingsPerMachine () {
     Set-ItemProperty -Path $registryPath -Name ProxyEnable -Value 0
     Set-ItemProperty -Path "$registryPath\Connections" -Name DefaultConnectionSettings -Value $defaultConnectionSettings
 }
- 
- Set-InternetProxy $ProxyPerMachine $TurnProxyOnOff $ProxyServer $ProxyBypassList
+
+Function SetFirefoxParameter () {
+    # Get each user profile SID and Path to the profile
+    $UserProfiles = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*" | Where { $_.PSChildName -match "S-1-5-21-(\d+-?){4}$" } | Select-Object @{Name = "SID"; Expression = { $_.PSChildName } }, @{Name = "UserHive"; Expression = { "$($_.ProfileImagePath)\NTuser.dat" } }, @{Name = "ProfileImagePath"; Expression = { $_.ProfileImagePath } }
+
+    get-process | select ProcessName, Id, CPU, Path | Where {$_.ProcessName -Match "firefox"} | Stop-Process -Force > $null
+
+    # Loop through each profile we found on the host
+    Foreach ($UserProfile in $UserProfiles) {
+        # Load ntuser.dat if it's not already loaded
+
+        $TopDir = $UserProfile.ProfileImagePath+"\AppData\Roaming\Mozilla\Firefox\Profiles"
+        $FileName = 'prefs.js'
+        $PageAccueil = 'http://tice45.ac-orleans-tours.fr/php5/portail/'
+        
+        
+        write-host "test"
+        if (Test-Path -Path $TopDir) {
+            write-host "test2"
+            # Rajouter .Where({$_.FullName -match '\.default'}) pour selectionner un profil spécifique
+            $DefaultProfileDir = (Get-ChildItem -LiteralPath $TopDir -Directory).FullName
+            $FullFileName = Join-Path -Path $DefaultProfileDir -ChildPath $FileName
+            if (Test-Path -Path $FullFileName) {
+                $Data = foreach($line in Get-Content $FullFileName) {
+
+                    # Suppression de tout les parametres proxy pour avoir la config par défaut (parametre proxy du systeme) ainsi que le paramètre page accueil
+                    if(($line.IndexOf('network.proxy')) -ne -1 -or ($line.IndexOf('user_pref("browser.startup.homepage",')) -ne -1) {
+                    } else {$line}
+                }
+
+                # Injection de notre page d'accueil personalisé
+                $Data += 'user_pref("browser.startup.homepage", "'+$PageAccueil+'");'
+
+                # Ecriture des nouveau paramètre dans le fichier
+                $data | Set-Content $FullFileName -Force
+                write-host "OK"
+            }
+        }
+    }
+}
+
+Function SetProxyCredentialPerUser () {
+    $credential = New-Object System.Management.Automation.PSCredential ($proxyUsername, (ConvertTo-SecureString -String $proxyPassword -AsPlainText -Force))
+    Invoke-Expression -Command "cmd.exe /C `"$env:windir\system32\cmdkey.exe`" /generic:`"$ProxyServer`" /user:`"$proxyUsername`" /pass:`"$proxyPassword`""
+    
+    $tacheAction = New-ScheduledTaskAction -Execute "$env:windir\system32\cmdkey.exe" -Argument "/generic:`"$ProxyServer`" /user:`"$proxyUsername`" /pass:`"$proxyPassword`""
+    $tacheDeclencheur = New-ScheduledTaskTrigger -AtLogOn
+    $tacheNom = "SetProxyCredential"
+    $tacheDescription = "Enregistre les identifiants proxy dans le gestionnaire d'identification"
+    Register-ScheduledTask -TaskPath  -TaskName $tacheNom -Action $tacheAction -Trigger $tacheDeclencheur -Description $tacheDescription
+}
+
+Set-InternetProxy $ProxyPerMachine $TurnProxyOnOff $ProxyServer $ProxyBypassList
+SetFirefoxParameter
+SetProxyCredentialPerUser

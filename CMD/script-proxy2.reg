@@ -1,0 +1,11 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings]
+"MigrateProxy"=dword:00000001
+"ProxyEnable"=dword:00000001
+"ProxyHttp1.1"=dword:00000000
+"ProxyServer"="http://proxy-ecoles.ac-orleans-tours.fr:3128"
+"ProxyOverride"="<local>"
+
+0451793e
+ecole45lecon
